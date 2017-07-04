@@ -12256,13 +12256,13 @@ Default GPU Device: /gpu:0
     <span class="n">inputs</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">contrib</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">embed_sequence</span><span class="p">(</span><span class="n">rnn_inputs</span><span class="p">,</span> <span class="n">source_vocab_size</span><span class="p">,</span> <span class="n">encoding_embedding_size</span><span class="p">)</span>
     
     <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    # The following does not work !!!</span>
+<span class="sd">    # The following does not work, although the it&#39;s based on class example !!!</span>
 <span class="sd">    lstm = tf.contrib.rnn.BasicLSTMCell(rnn_size)</span>
 <span class="sd">    dropout = tf.contrib.rnn.DropoutWrapper(lstm,output_keep_prob=keep_prob )</span>
 <span class="sd">    cell = tf.contrib.rnn.MultiRNNCell([dropout] * num_layers)</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     
-    <span class="c1">#In newer tensorflow (1.1.0) if you like different weights for different layers you should create more objects.</span>
+    <span class="c1">#In newer tensorflow (1.1.0) to have different weights for different layers, use the following:</span>
     <span class="c1"># Without dropout:</span>
     <span class="c1">#cell = tf.contrib.rnn.MultiRNNCell([tf.contrib.rnn.BasicLSTMCell(rnn_size) for _ in range(num_layers)])</span>
     
@@ -12347,36 +12347,6 @@ Default GPU Device: /gpu:0
     <span class="n">basic_decoder_output</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">contrib</span><span class="o">.</span><span class="n">seq2seq</span><span class="o">.</span><span class="n">dynamic_decode</span><span class="p">(</span><span class="n">basic_decoder</span><span class="p">,</span> <span class="n">impute_finished</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">maximum_iterations</span><span class="o">=</span><span class="n">max_summary_length</span><span class="p">)</span>
     
     <span class="k">return</span> <span class="n">basic_decoder_output</span>
-   
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    #Older version Tenforflow</span>
-<span class="sd">    dynamic_fn_train = tf.contrib.seq2seq.simple_decoder_fn_train(encoder_state)</span>
-<span class="sd">    outputs_train, final_state_train, _ = tf.contrib.seq2seq.dynamic_rnn_decoder(</span>
-<span class="sd">                                                            dec_cell,</span>
-<span class="sd">                                                            dynamic_fn_train, </span>
-<span class="sd">                                                            inputs=dec_embed_input,</span>
-<span class="sd">                                                            sequence_length=sequence_length,</span>
-<span class="sd">                                                            scope=decoding_scope)</span>
-
-<span class="sd">    logits = tf.contrib.layers.dropout(output_fn(outputs_train), keep_prob)</span>
-
-<span class="sd">    return logits</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    
-    <span class="sd">&quot;&quot;&quot;</span>
-<span class="sd">    #Older version Tenforflow, alternative implementation</span>
-<span class="sd">    train_decoder_fn = tf.contrib.seq2seq.simple_decoder_fn_train(encoder_state)</span>
-<span class="sd">    drop = tf.contrib.rnn.DropoutWrapper(dec_cell, output_keep_prob=keep_prob)</span>
-<span class="sd">    outputs_inference, _, _ = tf.contrib.seq2seq.dynamic_rnn_decoder(drop,</span>
-<span class="sd">                                                                     train_decoder_fn,</span>
-<span class="sd">                                                                     dec_embed_input,</span>
-<span class="sd">                                                                     sequence_length,</span>
-<span class="sd">                                                                     scope=decoding_scope)</span>
-<span class="sd">    inference_logits =  output_fn(outputs_inference)</span>
-
-<span class="sd">    return inference_logits</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-
 
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">DON&#39;T MODIFY ANYTHING IN THIS CELL THAT IS BELOW THIS LINE</span>
@@ -12543,7 +12513,16 @@ Default GPU Device: /gpu:0
    
     
     <span class="c1">#Construct the decoder LSTM cell</span>
-    <span class="sd">&quot;&quot;&quot; The following code works</span>
+    <span class="sd">&quot;&quot;&quot; The following had error. Why cannot have initalizer inside list comprehension ???</span>
+<span class="sd">    dec_cell = tf.contrib.rnn.MultiRNNCell([tf.contrib.rnn.BasicLSTMCell(rnn_size, </span>
+<span class="sd">                                                                         initializer=tf.random_uniform_initializer(-0.1, 0.1, seed=2)) for _ in range(num_layers)])</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="c1"># Without initalizer</span>
+    <span class="n">dec_cell</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">contrib</span><span class="o">.</span><span class="n">rnn</span><span class="o">.</span><span class="n">MultiRNNCell</span><span class="p">([</span><span class="n">tf</span><span class="o">.</span><span class="n">contrib</span><span class="o">.</span><span class="n">rnn</span><span class="o">.</span><span class="n">BasicLSTMCell</span><span class="p">(</span><span class="n">rnn_size</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_layers</span><span class="p">)])</span>
+   
+    <span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">    # With initializer</span>
 <span class="sd">    def make_cell(rnn_size):</span>
 <span class="sd">        dec_cell = tf.contrib.rnn.LSTMCell(rnn_size,</span>
 <span class="sd">                                           initializer=tf.random_uniform_initializer(-0.1, 0.1, seed=2))</span>
@@ -12551,13 +12530,6 @@ Default GPU Device: /gpu:0
 
 <span class="sd">    dec_cell = tf.contrib.rnn.MultiRNNCell([make_cell(rnn_size) for _ in range(num_layers)])</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    
-    <span class="sd">&quot;&quot;&quot; The following had error</span>
-<span class="sd">    dec_cell = tf.contrib.rnn.MultiRNNCell([tf.contrib.rnn.BasicLSTMCell(rnn_size, </span>
-<span class="sd">                                                                         initializer=tf.random_uniform_initializer(-0.1, 0.1, seed=2)) for _ in range(num_layers)])</span>
-<span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">dec_cell</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">contrib</span><span class="o">.</span><span class="n">rnn</span><span class="o">.</span><span class="n">MultiRNNCell</span><span class="p">([</span><span class="n">tf</span><span class="o">.</span><span class="n">contrib</span><span class="o">.</span><span class="n">rnn</span><span class="o">.</span><span class="n">BasicLSTMCell</span><span class="p">(</span><span class="n">rnn_size</span><span class="p">)</span> <span class="k">for</span> <span class="n">_</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_layers</span><span class="p">)])</span>
-   
        
     <span class="c1">#Build the Dense layer    </span>
     <span class="n">output_layer</span> <span class="o">=</span> <span class="n">Dense</span><span class="p">(</span><span class="n">target_vocab_size</span><span class="p">,</span> <span class="n">kernel_initializer</span> <span class="o">=</span>
